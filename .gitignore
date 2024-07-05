@@ -1,0 +1,8 @@
+ 
+# dependencies
+node_modules/
+
+# Auth file
+auth_data.json
+
+ 
