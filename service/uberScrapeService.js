@@ -81,32 +81,35 @@ const scrapeUberFareEstimates = async (
       }
     });
 
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 12000 });
-    await page.waitForTimeout(12000);
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 100000 });
+    await page.waitForTimeout(100000);
     console.log("Navigation to product selection page successful.");
 
-    await page.waitForSelector("div._css-zSrrc");
+    // Wait for the ul element to appear on the page
+    await page.waitForSelector("ul._css-jlxUSy", { timeout: 100000 });
 
     const data = await page.evaluate(() => {
       const rides = [];
       const uberData = [];
-      const uberGoElement = document.querySelectorAll("div._css-zSrrc", {
-        timeout: 6000,
-      });
-      for (var i = 0; i < uberGoElement.length; i++) {
-        const uberGoText = uberGoElement[i]
-          ? uberGoElement[i].innerText
-          : "No data found";
-        uberData.push(uberGoText);
-      }
+      document
+        .querySelectorAll(
+          'ul._css-jlxUSy > li[data-testid="product_selector.list_item"] > div._css-zSrrc'
+        )
+        .forEach((element) => {
+          const rideId = element
+            .closest('li[data-testid="product_selector.list_item"]')
+            .getAttribute("data-itemid");
+          const uberGoText = element ? element.innerText : "No data found";
+          uberData.push({ rideId, uberGoText });
+        });
 
-      const parseRideData = (rideString) => {
-        const parts = rideString.split("\n\n");
+      const parseRideData = (ride) => {
+        const parts = ride.uberGoText.split("\n\n");
         const rideType = parts[0].replace(/\d+$/, ""); // Remove trailing numbers
         const description = parts[2];
         const price = parts[3].startsWith("₹") ? parts[3] : "Unavailable";
 
-        return { rideType, price, description };
+        return { rideId: ride.rideId, rideType, price, description };
       };
 
       const parsedRides = uberData.map(parseRideData);
