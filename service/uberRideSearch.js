@@ -62,16 +62,16 @@ const selectAndRequestRide = async (
 
     let authData = null;
     try {
-      const data = await fs.readFile("auth_data.json", "utf-8");
+      const data = await fs.readFile("uber_auth_data.json", "utf-8");
       authData = JSON.parse(data);
-      console.log("Authentication data loaded from auth_data.json");
+      console.log("Authentication data loaded from uber_auth_data.json");
     } catch (err) {
       console.log("No previous authentication data found.");
     }
 
     if (authData && authData.cookies) {
       await context.addCookies(authData.cookies);
-      console.log("Cookies restored from auth_data.json");
+      console.log("Cookies restored from uber_auth_data.json");
     }
 
     const page = await context.newPage();
@@ -85,8 +85,11 @@ const selectAndRequestRide = async (
           cookies: cookies,
           timestamp: new Date().toISOString(),
         };
-        await fs.writeFile("auth_data.json", JSON.stringify(authData, null, 2));
-        console.log(`Authentication data saved to auth_data.json`);
+        await fs.writeFile(
+          "uber_auth_data.json",
+          JSON.stringify(authData, null, 2)
+        );
+        console.log(`Authentication data saved to uber_auth_data.json`);
       }
     });
 

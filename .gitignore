@@ -3,6 +3,6 @@
 node_modules/
 
 # Auth file
-auth_data.json
+uber_auth_data.json
 
  
