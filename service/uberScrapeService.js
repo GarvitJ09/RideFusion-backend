@@ -85,40 +85,55 @@ const scrapeUberFareEstimates = async (
     });
 
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 10000 });
-    await page.waitForTimeout(10000);
-    console.log("Navigation to product selection page successful.");
 
-    // Wait for the ul element to appear on the page
-    await page.waitForSelector("ul._css-jlxUSy", { timeout: 60000 });
+    // Retry logic with reduced timeout
+    let retries = 5;
+    let data = null;
+    while (retries > 0) {
+      try {
+        await page.waitForSelector("ul._css-jlxUSy", { timeout: 6000 });
+        data = await page.evaluate(() => {
+          const rides = [];
+          const uberData = [];
+          document
+            .querySelectorAll(
+              'ul._css-jlxUSy > li[data-testid="product_selector.list_item"] > div._css-zSrrc'
+            )
+            .forEach((element) => {
+              const rideId = element
+                .closest('li[data-testid="product_selector.list_item"]')
+                .getAttribute("data-itemid");
+              const uberGoText = element ? element.innerText : "No data found";
+              uberData.push({ rideId, uberGoText });
+            });
 
-    const data = await page.evaluate(() => {
-      const rides = [];
-      const uberData = [];
-      document
-        .querySelectorAll(
-          'ul._css-jlxUSy > li[data-testid="product_selector.list_item"] > div._css-zSrrc'
-        )
-        .forEach((element) => {
-          const rideId = element
-            .closest('li[data-testid="product_selector.list_item"]')
-            .getAttribute("data-itemid");
-          const uberGoText = element ? element.innerText : "No data found";
-          uberData.push({ rideId, uberGoText });
+          const parseRideData = (ride) => {
+            const parts = ride.uberGoText.split("\n\n");
+            const rideType = parts[0].replace(/\d+$/, ""); // Remove trailing numbers
+            const description = parts[2];
+            const price = parts[3].startsWith("₹") ? parts[3] : "Unavailable";
+
+            return { rideId: ride.rideId, rideType, price, description };
+          };
+
+          const parsedRides = uberData.map(parseRideData);
+
+          return parsedRides;
         });
 
-      const parseRideData = (ride) => {
-        const parts = ride.uberGoText.split("\n\n");
-        const rideType = parts[0].replace(/\d+$/, ""); // Remove trailing numbers
-        const description = parts[2];
-        const price = parts[3].startsWith("₹") ? parts[3] : "Unavailable";
+        if (data) {
+          break; // Exit retry loop if data is successfully retrieved
+        }
+      } catch (error) {
+        console.error(`Retry ${4 - retries} failed:`, error.message);
+        retries--;
+        await page.waitForTimeout(2000); // Wait before retrying
+      }
+    }
 
-        return { rideId: ride.rideId, rideType, price, description };
-      };
-
-      const parsedRides = uberData.map(parseRideData);
-
-      return parsedRides;
-    });
+    if (!data) {
+      throw new Error("Failed to fetch Uber fare estimates after retries.");
+    }
 
     console.log("Scraped Data:", data);
     return data;

@@ -58,40 +58,11 @@ const selectAndRequestRide = async (
   let browser;
   try {
     browser = await chromium.launch({ headless: false });
-    const context = await browser.newContext();
-
-    let authData = null;
-    try {
-      const data = await fs.readFile("uber_auth_data.json", "utf-8");
-      authData = JSON.parse(data);
-      console.log("Authentication data loaded from uber_auth_data.json");
-    } catch (err) {
-      console.log("No previous authentication data found.");
-    }
-
-    if (authData && authData.cookies) {
-      await context.addCookies(authData.cookies);
-      console.log("Cookies restored from uber_auth_data.json");
-    }
+    const context = await browser.newContext({
+      storageState: "uber_auth_data.json",
+    });
 
     const page = await context.newPage();
-
-    page.on("framenavigated", async (frame) => {
-      const url = frame.url();
-      if (url.includes("m.uber.com/go/")) {
-        const cookies = await context.cookies();
-        const authData = {
-          url: url,
-          cookies: cookies,
-          timestamp: new Date().toISOString(),
-        };
-        await fs.writeFile(
-          "uber_auth_data.json",
-          JSON.stringify(authData, null, 2)
-        );
-        console.log(`Authentication data saved to uber_auth_data.json`);
-      }
-    });
 
     const url = constructUberUrl(
       pickupLatitude,
@@ -99,30 +70,60 @@ const selectAndRequestRide = async (
       dropLatitude,
       dropLongitude
     );
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 10000 });
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 6000 });
     console.log("Navigation to product selection page successful.");
-    await page.waitForTimeout(10000);
 
     // Wait for the ul element to appear on the page
     await page.waitForSelector("ul._css-jlxUSy", { timeout: 6000 });
 
     // Click the ride based on the rideId (only if rideId is provided and valid)
-    if (rideId == 2007) {
-      await page.click(`li[data-itemid="${rideId}"]`);
+    if (rideId != 2007) {
+      await highlightAndClick(page, `li[data-itemid="${rideId}"]`);
       console.log(`Clicked on the ride with rideId: ${rideId}`);
     }
 
     // Wait for the "Request Uber Auto" button to appear and click it
     await page.waitForSelector('button[data-testid="request_trip_button"]', {
-      timeout: 5000,
+      timeout: 6000,
     });
-    await page.click('button[data-testid="request_trip_button"]');
+    await highlightAndClick(page, 'button[data-testid="request_trip_button"]');
     console.log(`Clicked on the "Request Uber Auto" button`);
 
-    // Additional steps to complete the ride request can be added here
-    await page.waitForTimeout(5000); // Example wait for 2 seconds to see the effect
+    // Wait until either user details or error message appears
+    const userDetailsSelector = 'div[data-baseweb="block"] > h4._css-jfZXzu';
+    const noDriverTextSelector = "div._css-xyzabc"; // Replace with actual selector for "No driver available" text
 
-    return { message: "Ride search initiated successfully." };
+    await Promise.race([
+      page.waitForSelector(userDetailsSelector, { timeout: 6000 }),
+      page.waitForSelector(noDriverTextSelector, { timeout: 6000 }),
+    ]);
+
+    let rideDetails = null;
+
+    // Check if user details are found
+    const userDetailsElement = await page.$(userDetailsSelector);
+    if (userDetailsElement) {
+      await highlight(page, userDetailsSelector);
+
+      const rideNumber = await page.textContent("h4._css-jfZXzu");
+      const riderName = await page.textContent("div._css-gpCJFN");
+      const vehicleType = await page.textContent("p._css-iCSGwJ");
+      const waitingMinutes = await page.textContent("div._css-jpCcoT");
+
+      rideDetails = {
+        rideNumber,
+        riderName,
+        vehicleType,
+        waitingMinutes,
+      };
+
+      console.log("Extracted ride data:", rideDetails);
+    } else {
+      // Handle case where no driver is available
+      throw new Error("No driver available or unable to find user details.");
+    }
+
+    return rideDetails;
   } catch (error) {
     console.error("Error:", error);
     throw new Error("An error occurred while processing the request.");
@@ -132,6 +133,27 @@ const selectAndRequestRide = async (
     }
   }
 };
+
+async function highlightAndClick(page, selector) {
+  await page.evaluate((selector) => {
+    const element = document.querySelector(selector);
+    if (element) {
+      element.style.border = "2px solid red";
+    }
+  }, selector);
+  await page.waitForTimeout(2000);
+  await page.click(selector);
+}
+
+async function highlight(page, selector) {
+  await page.evaluate((selector) => {
+    const element = document.querySelector(selector);
+    if (element) {
+      element.style.border = "2px solid red";
+    }
+  }, selector);
+  await page.waitForTimeout(2000);
+}
 
 module.exports = {
   startRideSearch,
