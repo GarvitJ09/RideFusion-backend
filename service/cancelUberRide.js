@@ -58,25 +58,20 @@ const cancelRide = async () => {
     // Navigate to the cancellation page
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 10000 });
     console.log("Navigation to cancellation page successful.");
-    await page.waitForTimeout(10000);
 
-    // Wait for the "Cancel" button to appear and click it
-    await page.waitForSelector('button[data-baseweb="button"]._css-jnfpen', {
-      timeout: 5000,
-    });
-    await page.click('button[data-baseweb="button"]._css-jnfpen');
+    // Wait for the "Cancel" button to appear and click it (with retry)
+    const cancelBtnSelector = 'button[data-baseweb="button"]._css-jnfpen';
+    await page.waitForSelector(cancelBtnSelector, { timeout: 6000 });
+    await retryClick(page, cancelBtnSelector);
+
     console.log(`Clicked on the "Cancel" button`);
 
-    // Wait for the "YES, CANCEL" button to appear and click it
-    await page.waitForSelector(
-      'button[data-baseweb="button"][data-tracking-name="cancel_ride"]',
-      {
-        timeout: 5000,
-      }
-    );
-    await page.click(
-      'button[data-baseweb="button"][data-tracking-name="cancel_ride"]'
-    );
+    // Wait for the "YES, CANCEL" button to appear and click it (with retry)
+    const confirmBtnSelector =
+      'button[data-baseweb="button"][data-tracking-name="cancel_ride"]';
+    await page.waitForSelector(confirmBtnSelector, { timeout: 6000 });
+    await retryClick(page, confirmBtnSelector);
+
     console.log(`Clicked on the "YES, CANCEL" button`);
 
     // Additional steps to confirm cancellation can be added here
@@ -93,6 +88,24 @@ const cancelRide = async () => {
       await browser.close();
     }
   }
+};
+
+// Helper function to retry clicking an element until success or max retries
+const retryClick = async (page, selector, maxRetries = 3) => {
+  let retries = 0;
+  while (retries < maxRetries) {
+    try {
+      await page.click(selector);
+      return;
+    } catch (error) {
+      retries++;
+      console.log(
+        `Attempt ${retries} failed to click ${selector}. Retrying...`
+      );
+      await page.waitForTimeout(2000); // Wait before retrying
+    }
+  }
+  throw new Error(`Failed to click ${selector} after ${maxRetries} retries.`);
 };
 
 module.exports = {

@@ -34,14 +34,14 @@ const startRideSearch = async (req, res) => {
   }
 
   try {
-    const fareEstimates = await selectAndRequestRide(
+    const rideDetails = await selectAndRequestRide(
       pickupLatitude,
       pickupLongitude,
       dropLatitude,
       dropLongitude,
       rideId
     );
-    res.json(fareEstimates);
+    res.json(rideDetails);
   } catch (error) {
     console.error("Error:", error);
     res
@@ -88,9 +88,16 @@ const selectAndRequestRide = async (
     page.on("console", (msg) => console.log("PAGE LOG:", msg.text()));
     page.on("pageerror", (error) => console.log("PAGE ERROR:", error.message));
 
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 100000 });
-    await page.waitForTimeout(10000);
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 16000 });
     console.log("Navigation to Ola booking page successful.");
+
+    const reloadSelector = "#ok.dialog-button.danger";
+    const reloadElement = await page.$(reloadSelector);
+
+    if (reloadElement) {
+      await page.click(reloadSelector);
+      console.log("Clicked 'Reload' button.");
+    }
 
     // Check login status
     const loginElement = await page.$("#login");
@@ -124,9 +131,11 @@ const selectAndRequestRide = async (
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 10000 });
     }
 
+    await page.waitForTimeout(10000);
+
     // Wait for the main container to appear
     await page.waitForSelector("div.card.car-cont.bg-white.when-NOW", {
-      timeout: 60000,
+      timeout: 10000,
     });
 
     await page.click(
@@ -136,20 +145,94 @@ const selectAndRequestRide = async (
     // Wait for the Confirm & Book button to appear and click it
     await page.waitForSelector(
       "button.nxt-btn-active.ola-ripple.next-btn-pos",
-      { timeout: 60000 }
+      { timeout: 5000 }
     );
     await page.click("button.nxt-btn-active.ola-ripple.next-btn-pos");
-
     console.log("Clicked Confirm & Book button.");
-    await page.waitForTimeout(5000); // Example wait for 2 seconds to see the effect
 
-    return { message: "Ride search initiated successfully." };
+    // Wait for a while to see if the "Don't allow" link appears and click it if present
+    const dontAllowSelector = "a.ptr.link";
+    const dontAllowElement = await page.$(dontAllowSelector);
+
+    if (dontAllowElement) {
+      await page.click(dontAllowSelector);
+      console.log("Clicked 'Don't allow' link.");
+    }
+
+    // Retry mechanism for waiting driver details
+    const maxRetries = 3;
+    let retries = 0;
+    let driverDetails = null;
+
+    while (retries < maxRetries) {
+      try {
+        // Wait for the driver details to appear
+        await page.waitForSelector("div.row", { timeout: 6000 });
+
+        // Extract the driver details
+        const vehicleDetails = await page.$eval(
+          "div.row div.middle.value.text.two-lines",
+          (el) => {
+            return {
+              vehicleModel: el.children[0].textContent.trim(),
+              vehicleType: el.children[1].textContent.trim(),
+            };
+          }
+        );
+
+        const vehicleNumber = await page.$eval(
+          "div.row div.far-right.cab-number",
+          (el) => {
+            return {
+              vehicleNumber:
+                el.children[0].textContent.trim() +
+                el.children[1].textContent.trim(),
+            };
+          }
+        );
+
+        const driverDetailsResult = await page.$eval(
+          "a.row[href^='tel']",
+          (el) => {
+            return {
+              driverName: el
+                .querySelector("div.middle.value.two-lines.name-lab div.bold")
+                .textContent.trim(),
+              driverRating: el
+                .querySelector(
+                  "div.middle.value.two-lines.name-lab div.driver-rating-value"
+                )
+                .textContent.trim(),
+              driverImage: el.querySelector("div.left.label img.bg-cover").src,
+            };
+          }
+        );
+
+        driverDetails = {
+          ...vehicleDetails,
+          ...vehicleNumber,
+          ...driverDetailsResult,
+        };
+
+        console.log("Extracted ride data:", driverDetails);
+        break; // Exit the retry loop if successful
+      } catch (error) {
+        retries++;
+        console.log(`Attempt ${retries} failed to find driver details.`);
+        if (retries === maxRetries) {
+          throw new Error("Failed to retrieve driver details after retries.");
+        }
+        await page.waitForTimeout(3000); // Wait before retrying
+      }
+    }
+
+    return driverDetails; // Return the extracted driver details
   } catch (error) {
     console.error("Error:", error);
     throw new Error("An error occurred while scraping Ola ride options");
   } finally {
     if (browser) {
-      await browser.close();
+      // await browser.close();
     }
   }
 };
