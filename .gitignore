@@ -4,5 +4,6 @@ node_modules/
 
 # Auth file
 uber_auth_data.json
+ola_auth_data.json
 
  
