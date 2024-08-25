@@ -56,28 +56,45 @@ const cancelRide = async () => {
     const url = `https://m.uber.com/go/on-trip`;
 
     // Navigate to the cancellation page
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 10000 });
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
     console.log("Navigation to cancellation page successful.");
+    let retries = 110;
+    let data = null;
+    while (retries > 0) {
+      try {
+        const cancelBtnSelector = 'button[data-baseweb="button"]._css-jnfpen';
+        await page.waitForSelector(cancelBtnSelector, { timeout: 15000 });
+        await retryClick(page, cancelBtnSelector);
+
+        console.log(`Clicked on the "Cancel" button`);
+
+        // Wait for the "YES, CANCEL" button to appear and click it (with retry)
+        const confirmBtnSelector =
+          'button[data-baseweb="button"][data-tracking-name="cancel_ride"]';
+        await page.waitForSelector(confirmBtnSelector, { timeout: 12000 });
+        await retryClick(page, confirmBtnSelector);
+
+        console.log(`Clicked on the "YES, CANCEL" button`);
+
+        // Additional steps to confirm cancellation can be added here
+        await page.waitForTimeout(5000); // Example wait for 5 seconds to see the effect
+
+        return "Ride cancellation initiated successfully.";
+      } catch (error) {
+        console.error(`Retry ${4 - retries} failed:`, error.message);
+        retries--;
+        await page.waitForTimeout(2000); // Wait before retrying
+      }
+    }
+
+    if (!data) {
+      throw new Error("Failed to fetch Uber fare estimates after retries.");
+    }
+
+    console.log("Scraped Data:", data);
+    return data;
 
     // Wait for the "Cancel" button to appear and click it (with retry)
-    const cancelBtnSelector = 'button[data-baseweb="button"]._css-jnfpen';
-    await page.waitForSelector(cancelBtnSelector, { timeout: 6000 });
-    await retryClick(page, cancelBtnSelector);
-
-    console.log(`Clicked on the "Cancel" button`);
-
-    // Wait for the "YES, CANCEL" button to appear and click it (with retry)
-    const confirmBtnSelector =
-      'button[data-baseweb="button"][data-tracking-name="cancel_ride"]';
-    await page.waitForSelector(confirmBtnSelector, { timeout: 6000 });
-    await retryClick(page, confirmBtnSelector);
-
-    console.log(`Clicked on the "YES, CANCEL" button`);
-
-    // Additional steps to confirm cancellation can be added here
-    await page.waitForTimeout(5000); // Example wait for 5 seconds to see the effect
-
-    return "Ride cancellation initiated successfully.";
   } catch (error) {
     console.error("Error:", error);
     throw new Error(

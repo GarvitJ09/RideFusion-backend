@@ -87,7 +87,7 @@ const scrapeUberFareEstimates = async (
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 10000 });
 
     // Retry logic with reduced timeout
-    let retries = 5;
+    let retries = 110;
     let data = null;
     while (retries > 0) {
       try {

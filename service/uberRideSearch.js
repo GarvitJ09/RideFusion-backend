@@ -1,5 +1,5 @@
-const { chromium } = require('playwright');
-const fs = require('fs/promises');
+const { chromium } = require("playwright");
+const fs = require("fs/promises");
 
 const constructUberUrl = (
   pickupLatitude,
@@ -28,7 +28,7 @@ const startRideSearch = async (req, res) => {
   ) {
     return res
       .status(400)
-      .json({ error: 'Missing required query parameters.' });
+      .json({ error: "Missing required query parameters." });
   }
 
   try {
@@ -41,10 +41,10 @@ const startRideSearch = async (req, res) => {
     );
     res.json(fareEstimates);
   } catch (error) {
-    console.error('Error:', error);
+    console.error("Error:", error);
     res
       .status(500)
-      .json({ error: 'An error occurred while processing the request.' });
+      .json({ error: "An error occurred while processing the request." });
   }
 };
 
@@ -59,7 +59,7 @@ const selectAndRequestRide = async (
   try {
     browser = await chromium.launch({ headless: false });
     const context = await browser.newContext({
-      storageState: 'uber_auth_data.json',
+      storageState: "uber_auth_data.json",
     });
 
     const page = await context.newPage();
@@ -70,11 +70,11 @@ const selectAndRequestRide = async (
       dropLatitude,
       dropLongitude
     );
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 6000 });
-    console.log('Navigation to product selection page successful.');
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 6000 });
+    console.log("Navigation to product selection page successful.");
 
     // Wait for the ul element to appear on the page
-    await page.waitForSelector('ul._css-jlxUSy', { timeout: 6000 });
+    await page.waitForSelector("ul._css-jlxUSy", { timeout: 12000 });
 
     // Click the ride based on the rideId (only if rideId is provided and valid)
     if (rideId != 2007) {
@@ -93,7 +93,7 @@ const selectAndRequestRide = async (
 
     // Wait until either user details or error message appears
     const userDetailsSelector = 'div[data-baseweb="block"] > h4._css-jfZXzu';
-    const noDriverTextSelector = 'div._css-xyzabc'; // Replace with actual selector for "No driver available" text
+    const noDriverTextSelector = "div._css-xyzabc"; // Replace with actual selector for "No driver available" text
 
     await Promise.race([
       page.waitForSelector(userDetailsSelector, { timeout: 6000 }),
@@ -107,12 +107,12 @@ const selectAndRequestRide = async (
     if (userDetailsElement) {
       // await highlight(page, userDetailsSelector);
 
-      const rideNumber = await page.textContent('h4._css-jfZXzu');
-      const riderName = await page.textContent('div._css-gpCJFN');
-      const vehicleType = await page.textContent('p._css-iCSGwJ');
-      const waitingMinutes = await page.textContent('div._css-jpCcoT');
-      const vehicleNumber = await page.textContent('h4._css-jfZXzu');
-      const riderRating = await page.textContent('p._css-ctufCX');
+      const rideNumber = await page.textContent("h4._css-jfZXzu");
+      const riderName = await page.textContent("div._css-gpCJFN");
+      const vehicleType = await page.textContent("p._css-iCSGwJ");
+      const waitingMinutes = await page.textContent("div._css-jpCcoT");
+      const vehicleNumber = await page.textContent("h4._css-jfZXzu");
+      const riderRating = await page.textContent("p._css-ctufCX");
 
       rideDetails = {
         rideNumber,
@@ -123,19 +123,20 @@ const selectAndRequestRide = async (
         riderRating,
       };
 
-      console.log('Extracted ride data:', rideDetails);
+      console.log("Extracted ride data:", rideDetails);
     } else {
       // Handle case where no driver is available
-      throw new Error('No driver available or unable to find user details.');
+      throw new Error("No driver available or unable to find user details.");
     }
+    await page.waitForTimeout(5000); // Example wait for 5 seconds to see the effect
 
     return rideDetails;
   } catch (error) {
-    console.error('Error:', error);
-    throw new Error('An error occurred while processing the request.');
+    console.error("Error:", error);
+    throw new Error("An error occurred while processing the request.");
   } finally {
     if (browser) {
-      // await browser.close();
+      await browser.close();
     }
   }
 };
@@ -144,7 +145,7 @@ async function highlightAndClick(page, selector) {
   await page.evaluate((selector) => {
     const element = document.querySelector(selector);
     if (element) {
-      element.style.border = '2px solid red';
+      element.style.border = "2px solid red";
     }
   }, selector);
   await page.waitForTimeout(2000);
@@ -155,7 +156,7 @@ async function highlight(page, selector) {
   await page.evaluate((selector) => {
     const element = document.querySelector(selector);
     if (element) {
-      element.style.border = '2px solid red';
+      element.style.border = "2px solid red";
     }
   }, selector);
   await page.waitForTimeout(2000);
