@@ -1,5 +1,5 @@
 {
-  "url": "https://book.olacabs.com/?lat=12.9237022&lng=77.6641198&pickup=&drop_lat=12.9788206&drop_lng=77.7148979",
+  "url": "https://book.olacabs.com/?lat=13.0021984&lng=77.7115384&pickup=&drop_lat=12.9788206&drop_lng=77.7148979",
   "cookies": [
     {
       "name": "_GRECAPTCHA",
@@ -46,7 +46,7 @@
       "value": "Y53qn7h%2F0u%2FTpE5pQnSfoG4ur8d5Qo3Sg%2FjNwDws0X06V4OIBJSXDY7WhnAhTGTx",
       "domain": ".app.link",
       "path": "/",
-      "expires": 1736189796.179701,
+      "expires": 1737185104.883293,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
@@ -69,16 +69,6 @@
       "expires": -1,
       "httpOnly": false,
       "secure": true,
-      "sameSite": "Lax"
-    },
-    {
-      "name": "_gid",
-      "value": "GA1.2.866870132.1720459808",
-      "domain": ".olacabs.com",
-      "path": "/",
-      "expires": 1720551400,
-      "httpOnly": false,
-      "secure": false,
       "sameSite": "Lax"
     },
     {
@@ -152,25 +142,15 @@
       "sameSite": "Lax"
     },
     {
-      "name": "RT",
-      "value": "\"z=1&dm=book.olacabs.com&si=739166a3-0963-4fe6-ac16-95ecb30ef79e&ss=lyddsw3q&sl=3&tt=gp&obo=2&ld=65w4&r=blifij4z&hd=65w5\"",
-      "domain": ".book.olacabs.com",
-      "path": "/",
-      "expires": 1721072376,
-      "httpOnly": false,
-      "secure": false,
-      "sameSite": "Lax"
-    },
-    {
       "name": "AKA_A2",
       "value": "A",
       "domain": ".olacabs.com",
       "path": "/",
-      "expires": 1720476162.116714,
+      "expires": 1721463904.244518,
       "httpOnly": true,
       "secure": true,
       "sameSite": "Lax"
     }
   ],
-  "timestamp": "2024-07-08T21:13:32.971Z"
+  "timestamp": "2024-07-20T07:25:05.039Z"
 }
